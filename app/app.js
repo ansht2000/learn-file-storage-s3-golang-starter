@@ -258,6 +258,7 @@ function viewVideo(video) {
 
   const thumbnailImg = document.getElementById('thumbnail-image');
   if (!video.thumbnail_url) {
+    console.log("could not find thumbnail")
     thumbnailImg.style.display = 'none';
   } else {
     thumbnailImg.style.display = 'block';
