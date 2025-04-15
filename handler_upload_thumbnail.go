@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -35,6 +35,7 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	// TODO: implement the upload here
 	const maxMemory = 10 << 20
+
 	if err = r.ParseMultipartForm(maxMemory); err != nil {
 		respondWithError(w, http.StatusBadRequest, "could not parse uploaded file", err)
 		return
@@ -48,9 +49,22 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	defer file.Close()
 
 	mediaType := header.Header.Get("Content-Type")
-	imageData, err := io.ReadAll(file)
+	if mediaType == "" {
+		respondWithError(w, http.StatusBadRequest, "missing content-type for thumbnail", err)
+		return
+	}
+
+	filepath := getAssetPath(videoID, mediaType)
+	assetDiskPath := cfg.getAssetDiskPath(filepath)
+	createdFile, err := os.Create(assetDiskPath)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "could not read from uploaded file", err)
+		respondWithError(w, http.StatusInternalServerError, "could not create asset file", err)
+		return
+	}
+	defer createdFile.Close()
+	_, err = io.Copy(createdFile, file)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not create asset file", err)
 		return
 	}
 
@@ -63,14 +77,9 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 		respondWithError(w, http.StatusInternalServerError, "could not retrieve video metadata", err)
 		return
 	}
-
-	newThumbnail := thumbnail{
-		data: imageData,
-		mediaType: mediaType,
-	}
-	imgDataEncode := base64.StdEncoding.EncodeToString([]byte(newThumbnail.data))
-	thumbnailDataURL := fmt.Sprintf("data:%s;base64,%s", newThumbnail.mediaType, imgDataEncode)
-	videoMetaData.ThumbnailURL = &thumbnailDataURL
+	
+	newThumbnailURL := cfg.getAssetURL(filepath)
+	videoMetaData.ThumbnailURL = &newThumbnailURL
 	cfg.db.UpdateVideo(videoMetaData)
 
 	respondWithJSON(w, http.StatusOK, videoMetaData)
