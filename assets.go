@@ -24,12 +24,30 @@ func getAssetPath(mediaType string) string {
 	return fmt.Sprintf("%s%s", randString, ext)
 }
 
+func getS3VideoAssetPath(mediaType string, aspectRatio string) string {
+	assetPath := getAssetPath(mediaType)
+	var directoryString string
+	if aspectRatio == "16:9" {
+		directoryString = "landscape"
+	} else if aspectRatio == "9:16" {
+		directoryString = "portrait"
+	} else {
+		directoryString = "other"
+	}
+
+	return directoryString + "/" + assetPath
+}
+
 func (cfg apiConfig) getAssetDiskPath(assetPath string) string {
 	return filepath.Join(cfg.assetsRoot, assetPath)
 }
 
 func (cfg apiConfig) getAssetURL(assetPath string) string {
 	return fmt.Sprintf("http://localhost:%s/assets/%s", cfg.port, assetPath)
+}
+
+func (cfg apiConfig) getS3AssetURL(assetPath string) string {
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", cfg.s3Bucket, cfg.s3Region, assetPath)
 }
 
 func mediaTypeToExt(mediaType string) string {

@@ -9,13 +9,8 @@ import (
 )
 
 func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Password string `json:"password"`
-		Email    string `json:"email"`
-	}
-
 	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
+	params := userParameters{}
 	err := decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
@@ -42,5 +37,14 @@ func (cfg *apiConfig) handlerUsersCreate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, user)
+	accessToken, refreshToken, err := createJWTAndRefreshToken(cfg, user.ID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error creating JWT or refresh token", err)
+	}
+
+	respondWithJSON(w, http.StatusCreated, userResponse{
+		User: *user,
+		Token: accessToken,
+		RefreshToken: refreshToken,
+	})
 }

@@ -15,7 +15,7 @@ func getFilenameFromURL(URL string) string {
 func (cfg *apiConfig) cleanupPreviousThumbnail(thumbnailURL *string) {
 	// check for both cases where thumbnail is an empty string
 	// or thumbnail is not set
-	if *thumbnailURL != "" && thumbnailURL != nil {
+	if thumbnailURL != nil && *thumbnailURL != "" {
 		filename := getFilenameFromURL(*thumbnailURL)
 		filepath := path.Join(cfg.assetsRoot, filename)
 		if err := os.Remove(filepath); err != nil {
