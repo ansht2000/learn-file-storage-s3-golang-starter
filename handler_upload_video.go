@@ -96,11 +96,25 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "an error occurred processing the video", err)
 		return
 	}
+
+	processedFilePath, err := processVideoForFastStart(tempFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "an error occurred processing the video", err)
+		return
+	}
+	processedFile, err := os.Open(processedFilePath)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "an error occurred processing the video", err)
+		return
+	}
+	defer os.Remove(processedFilePath)
+	defer processedFile.Close()
+
 	filepath := getS3VideoAssetPath(mediaType, aspectRatio)
 	putObjectParams := s3.PutObjectInput{
 		Bucket: &cfg.s3Bucket,
 		Key: &filepath,
-		Body: tempFile,
+		Body: processedFile,
 		ContentType: &mediaType,
 	}
 	cfg.s3client.PutObject(r.Context(), &putObjectParams)
